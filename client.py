@@ -1,77 +1,91 @@
+import ipaddress
 import os.path
 import socket
-import sys
 import threading
 import time
 
 # from messages import Message, MessageType
 from test2 import Message, MessageType
-from server import server, server_switch
 
-CLIENT_IP = "192.168.0.179"  # "127.0.0.1"
-CLIENT_PORT = 50602
-SERVER_IP = "192.168.0.115"  # "127.0.0.1"
-SERVER_PORT = 50601
+keep_alive_socket = None
 
-max_fragment_size = 50
+client_ip = None
+client_port = None
+
+server_ip = None
+server_port = None
+
+max_fragment_size = 64
+
 data_transferred = False
 alive = True
 
+file_err_simulation_mode = False
+
 
 def send(ip, port):
-    global alive, max_fragment_size, data_transferred, CLIENT_IP, CLIENT_PORT, SERVER_PORT, SERVER_IP
+    global alive, max_fragment_size, data_transferred, client_ip, client_port, server_port, server_ip, file_err_simulation_mode
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     init_msg = Message(0, MessageType.INIT)
     s.sendto(init_msg.serialize(), (ip, port))
-    print(f"Connection init sent")
+
+    print("Connection init requested")
 
     while True:
         try:
             s.settimeout(10)
-            ack, _ = s.recvfrom(1024)
+            ack, _ = s.recvfrom(max(1024, max_fragment_size + 8))
             received_ack = Message.deserialize(ack)
 
             if received_ack.msg_type == MessageType.ACK:
-                print(f"Connection initialized")
+                print("Connection successfully initialized")
+
                 break
         except socket.timeout:
-            print(f"Timeout occurred while waiting for acknowledgment of connection init. Resending...")
+            print("Timeout occurred while waiting for acknowledgement of connection init. Resending...")
             s.sendto(init_msg.serialize(), (ip, port))
 
     while True:
-        print('Select the mode or type in "EXIT" to terminate the session:')
-        print('1. Transfer a file')
-        print('2. Set the maximum fragment size')
-        print('3. Switch the nodes')
-        print('4. Send a text message')
+        print("Select the mode or type in \"EXIT\" to terminate the session:")
+        print("1. Transfer a file")
+        print("2. Set the maximum fragment size")
+        print("3. Switch the nodes")
+        print(f"4. Turn the file transfer error simulation mode {'on' if not file_err_simulation_mode else 'off'}")
 
         mode = input().strip().upper()
 
-        if mode == 'EXIT':
+        if mode == "EXIT":
             fin_msg = Message(0, MessageType.FIN)
             s.sendto(fin_msg.serialize(), (ip, port))
-            print(f"Connection termination sent")
+            print("Connection termination requested")
 
             while True:
                 try:
                     s.settimeout(10)
-                    ack, _ = s.recvfrom(1024)
+                    ack, _ = s.recvfrom(max(1024, max_fragment_size + 8))
                     received_ack = Message.deserialize(ack)
 
                     if received_ack.msg_type == MessageType.ACK:
-                        print(f"Connection terminated")
+                        print("Connection successfully terminated")
 
-                        sys.exit()
+                        alive = False
+
+                        s.close()
+
+                        break
                 except socket.timeout:
-                    print(f"Timeout occurred while waiting for acknowledgment of connection termination")
+                    print("Timeout occurred while waiting for acknowledgement of connection termination")
+
                     s.sendto(fin_msg.serialize(), (ip, port))
-        elif mode == '1':
+
+            break
+        elif mode == "1":
             path = input("Enter your file path: ")
 
             if not os.path.exists(path):
-                print('The path is invalid! Try again')
+                print("The path is invalid! Try again")
 
                 continue
 
@@ -80,29 +94,33 @@ def send(ip, port):
             msg = Message(0, MessageType.FILE_PATH, path.encode())
 
             s.sendto(msg.serialize(), (ip, port))
+
             print(f"File path sent: {path}")
 
             while True:
                 try:
                     s.settimeout(10)
-                    ack, _ = s.recvfrom(1024)
+                    ack, _ = s.recvfrom(max(1024, max_fragment_size + 8))
                     received_ack = Message.deserialize(ack)
 
                     if received_ack.msg_type == MessageType.ACK:
-                        print(f"File path sent successfully.")
+                        print("File path sent successfully")
+
                         break
                     elif received_ack.msg_type == MessageType.NACK:
-                        print(f"File path was not received correctly. Resending...")
+                        print("File path was not received correctly. Resending...")
+
                         s.sendto(msg.serialize(), (ip, port))
                 except socket.timeout:
-                    print(f"Timeout occurred while waiting for acknowledgment of file path")
+                    print("Timeout occurred while waiting for file path acknowledgement")
+
                     s.sendto(msg.serialize(), (ip, port))
 
-            with open(path, 'rb') as file:
+            with open(path, "rb") as file:
                 content = file.read()
                 fragments = [content[i:i + max_fragment_size] for i in range(0, len(content), max_fragment_size)]
 
-                count_msg = Message(0, MessageType.FRAGMENT_COUNT, f'{len(fragments)}'.encode())
+                count_msg = Message(0, MessageType.FRAGMENT_COUNT, f"{len(fragments)}".encode())
 
                 s.sendto(count_msg.serialize(), (ip, port))
                 print(f"Fragment count ({len(fragments)}) sent")
@@ -110,67 +128,89 @@ def send(ip, port):
                 while True:
                     try:
                         s.settimeout(10)
-                        ack, _ = s.recvfrom(1024)
+                        ack, _ = s.recvfrom(max(1024, max_fragment_size + 8))
                         received_ack = Message.deserialize(ack)
 
                         if received_ack.msg_type == MessageType.ACK:
-                            print(f"Fragment count sent successfully.")
+                            print("Fragment count successfully received")
+
                             break
                         elif received_ack.msg_type == MessageType.NACK:
-                            print(f"Fragment count was not received correctly. Resending...")
+                            print("Fragment count was not received correctly. Resending...")
+
                             s.sendto(count_msg.serialize(), (ip, port))
                     except socket.timeout:
-                        print(f"Timeout occurred while waiting for acknowledgment of fragment count. Resending...")
+                        print("Timeout occurred while waiting for fragment count acknowledgement. Resending...")
+
                         s.sendto(count_msg.serialize(), (ip, port))
 
                 window_size = 4
                 base = 0
                 next_sequence_number = 0
 
-                # Send fragments to the receiver using Go-Back-N
+                # Go-Back-N
                 while base < len(fragments):
-                    for i in range(base, min(base + window_size, len(fragments))):
-                        fragment = fragments[i]
-                        msg = Message(i, MessageType.DATA, fragment)
+                    while next_sequence_number < min(base + window_size, len(fragments)):
+                        fragment = fragments[next_sequence_number]
+
+                        msg = Message(next_sequence_number, MessageType.DATA, fragment)
+
                         s.sendto(msg.serialize(), (ip, port))
+
                         next_sequence_number += 1
 
-                    s.settimeout(10)
-
                     try:
-                        while True:
-                            ack, _ = s.recvfrom(1024)
-                            received_ack = Message.deserialize(ack)
-                            if received_ack.msg_type == MessageType.ACK and received_ack.fragment_number == base:
-                                print(f"Acknowledgment received for fragment {base}.")
+                        s.settimeout(16)
 
-                                base += 1
+                        while True:
+                            ack, _ = s.recvfrom(max(1024, max_fragment_size + 8))
+                            received_ack = Message.deserialize(ack)
+
+                            if received_ack.msg_type == MessageType.ACK and received_ack.fragment_number >= base:
+                                print(f"Acknowledgement received for fragment {received_ack.fragment_number}")
+
+                                base = received_ack.fragment_number + 1
 
                                 break
-                            elif received_ack.msg_type == MessageType.ACK_AND_SWITCH and received_ack.fragment_number == base:
+                            elif received_ack.msg_type == MessageType.ACK_AND_SWITCH and received_ack.fragment_number >= base:
+                                print(f"Acknowledgement received for fragment {received_ack.fragment_number}")
+
+                                base = received_ack.fragment_number + 1
+
                                 while True:
-                                    print('The server asks if you would like to switch the roles:')
-                                    print('1. Yes')
-                                    print('2. No')
+                                    print("The server asks if you would like to switch the roles:")
+                                    print("1. Yes")
+                                    print("2. No")
 
                                     mode = input().strip().upper()
 
-                                    if mode == '1':
+                                    if mode == "1":
                                         s.sendto(Message(0, MessageType.ACK).serialize(), (ip, port))
+
                                         data_transferred = False
+
                                         break
-                                    elif mode == '2':
+                                    elif mode == "2":
                                         s.sendto(Message(0, MessageType.NACK).serialize(), (ip, port))
+
                                         data_transferred = False
+
                                         break
                                     else:
-                                        print('Invalid input! Please try again!')
+                                        print("Invalid input! Please try again!")
+
+                                break
                             else:
-                                print("Invalid or no acknowledgment received. Resending the window...")
+                                next_sequence_number = received_ack.fragment_number
+
+                                print("Invalid or no acknowledgement received. Resending the window...")
+
                                 break
                     except socket.timeout:
-                        print("Timeout occurred while waiting for acknowledgment. Resending the window...")
-        elif mode == '2':
+                        next_sequence_number = base
+
+                        print("Timeout occurred while waiting for acknowledgement. Resending the window...")
+        elif mode == "2":
             try:
                 size = int(input("Enter your size in bytes: "))
 
@@ -180,133 +220,74 @@ def send(ip, port):
                 msg = Message(0, MessageType.CHANGE_MAX_FRAGMENT_SIZE, f'{size}'.encode())
 
                 s.sendto(msg.serialize(), (ip, port))
-                print(f"Max fragment size ({size}) sent")
+
+                print(f"Maximum fragment size ({size}) sent")
 
                 while True:
                     try:
                         s.settimeout(10)
-                        ack, _ = s.recvfrom(1024)
+                        ack, _ = s.recvfrom(max(1024, max_fragment_size + 8))
                         received_ack = Message.deserialize(ack)
 
                         if received_ack.msg_type == MessageType.ACK:
                             max_fragment_size = size
-                            print(f"Fragment size changed successfully.")
+
+                            print("Fragment size changed successfully")
+
                             break
                         elif received_ack.msg_type == MessageType.NACK:
-                            print(f"Fragment size change request was not received correctly. Resending...")
+                            print("Fragment size change request was not received correctly. Resending...")
+
                             s.sendto(msg.serialize(), (ip, port))
                     except socket.timeout:
-                        print(f"Timeout occurred while waiting for acknowledgment of fragment size change. Resending...")
+                        print("Timeout occurred while waiting for fragment size change acknowledgement. Resending...")
+
                         s.sendto(msg.serialize(), (ip, port))
             except ValueError:
-                print('The value is invalid! Try again')
-        elif mode == '3':
+                print("The value is invalid! Try again")
+        elif mode == "3":
             msg = Message(0, MessageType.SWITCH_NODES)
 
             s.sendto(msg.serialize(), (ip, port))
-            print(f"Switch request sent")
+
+            print("Node switch requested")
 
             while True:
                 try:
                     s.settimeout(10)
-                    ack, _ = s.recvfrom(1024)
+                    ack, _ = s.recvfrom(max(1024, max_fragment_size + 8))
                     received_ack = Message.deserialize(ack)
 
                     if received_ack.msg_type == MessageType.ACK:
-                        print(f"Starting the switch.")
-                        # CLIENT_IP, SERVER_IP = SERVER_IP, CLIENT_IP
-                        # CLIENT_PORT, SERVER_PORT = SERVER_PORT, CLIENT_PORT
+                        print("Starting the switch")
+                        # client_switch()
                         # server_switch()
 
                         break
                 except socket.timeout:
-                    print(f"Timeout occurred while waiting for acknowledgment of the switch request. Resending...")
+                    print("Timeout occurred while waiting for switch request acknowledgement. Resending...")
+
                     s.sendto(msg.serialize(), (ip, port))
 
             alive = False
+
             break
-        elif mode == '4':
-            message = input("Enter your message: ").encode()
+        elif mode == "4":
+            file_err_simulation_mode = not file_err_simulation_mode
 
-            data_transferred = True
-
-            fragments = [message[i:i + max_fragment_size] for i in range(0, len(message), max_fragment_size)]
-
-            count_msg = Message(0, MessageType.FRAGMENT_COUNT, f'{len(fragments)}'.encode())
-
-            s.sendto(count_msg.serialize(), (ip, port))
-            print(f"Fragment count ({len(fragments)}) sent")
-
-            while True:
-                try:
-                    s.settimeout(10)
-                    ack, _ = s.recvfrom(1024)
-                    received_ack = Message.deserialize(ack)
-
-                    if received_ack.msg_type == MessageType.ACK:
-                        print(f"Fragment count sent successfully.")
-                        break
-                    elif received_ack.msg_type == MessageType.NACK:
-                        print(f"Fragment count was not received correctly. Resending...")
-                        s.sendto(count_msg.serialize(), (ip, port))
-                except socket.timeout:
-                    print(f"Timeout occurred while waiting for acknowledgment of fragment count. Resending...")
-                    s.sendto(count_msg.serialize(), (ip, port))
-
-            for i, fragment in enumerate(fragments):
-                msg = Message(i, MessageType.TEST_MSG, fragment)
-                s.sendto(msg.serialize(), (ip, port))
-                print(f"Sent: fragment {i}")
-
-                while True:
-                    try:
-                        s.settimeout(10)
-                        ack, _ = s.recvfrom(1024)
-                        received_ack = Message.deserialize(ack)
-                        if received_ack.msg_type == MessageType.ACK and received_ack.fragment_number == i:
-                            print(f"Fragment {i} sent successfully.")
-                            break
-                        elif received_ack.msg_type == MessageType.NACK and received_ack.fragment_number == i:
-                            print(f"Fragment {i} was not received correctly. Resending...")
-                            s.sendto(msg.serialize(), (ip, port))
-                        elif received_ack.msg_type == MessageType.ACK_AND_SWITCH and received_ack.fragment_number == i:
-                            while True:
-                                print('The server asks if you would like to switch the roles:')
-                                print('1. Yes')
-                                print('2. No')
-
-                                mode = input().strip().upper()
-
-                                if mode == '1':
-                                    s.sendto(Message(0, MessageType.ACK).serialize(), (ip, port))
-                                    data_transferred = False
-                                    break
-                                elif mode == '2':
-                                    s.sendto(Message(0, MessageType.NACK).serialize(), (ip, port))
-                                    data_transferred = False
-                                    break
-                                else:
-                                    print('Invalid input! Please try again!')
-                            break
-                    except socket.timeout:
-                        print(f"Timeout occurred while waiting for acknowledgment of fragment {i}. Resending...")
-                        s.sendto(msg.serialize(), (ip, port))
+            print(f"The file transfer error simulation mode is now {'on' if file_err_simulation_mode else 'off'}!")
         else:
-            print('Invalid input! Please try again!')
-
-    server()
+            print("Invalid input! Please try again!")
 
 
 def keep_alive():
-    global SERVER_IP, SERVER_PORT, data_transferred, alive
+    global server_ip, server_port, data_transferred, alive
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    timeout_occurred = False
-
     while alive:
         if not data_transferred:
-            s.sendto(Message(0, MessageType.KEEP_ALIVE).serialize(), (SERVER_IP, SERVER_PORT))
+            s.sendto(Message(0, MessageType.KEEP_ALIVE).serialize(), (server_ip, server_port))
 
             try:
                 s.settimeout(10)
@@ -316,37 +297,53 @@ def keep_alive():
                 if received_ack.msg_type == MessageType.ACK:
                     time.sleep(10)
             except socket.timeout:
-                print(f"Timeout occurred while waiting for acknowledgment of keep-alive. Terminating...")
-                s.sendto(Message(0, MessageType.TIMEOUT).serialize(), (SERVER_IP, SERVER_PORT))
-                timeout_occurred = True
-                break
+                print("Timeout occurred while waiting for keep-alive acknowledgement. Waiting...")
+                s.sendto(Message(0, MessageType.TIMEOUT).serialize(), (server_ip, server_port))
         else:
             time.sleep(10)
 
-    if timeout_occurred and alive:
-        while True:
-            print('Select the mode or type in "EXIT" to terminate the session:')
-            print('1. Server')
-            print('2. Client')
+    s.close()
 
-            mode = input().strip().upper()
 
-            if mode == 'EXIT':
-                break
-            elif mode == '1':
-                server()
-            elif mode == '2':
-                client()
-            else:
-                print('Invalid input! Please try again!')
+def client_switch():
+    global client_ip, client_port, server_port, server_ip
+
+    client_port, server_port = server_port, client_port
+    client_ip, server_ip = server_ip, client_ip
 
 
 def client():
-    sender_thread = threading.Thread(target=send, args=(SERVER_IP, SERVER_PORT))
-    keep_alive_thread = threading.Thread(target=keep_alive)
+    global alive, server_ip, server_port
 
-    sender_thread.start()
-    keep_alive_thread.start()
+    while True:
+        try:
+            ip = input("Enter the server IP address: ").strip()
 
-    sender_thread.join()
-    keep_alive_thread.join()
+            ipaddress.IPv4Address(ip)
+
+            server_ip = ip
+
+            port = input("Enter the server port: ").strip()
+
+            try:
+                if 0 <= int(port) <= 65535:
+                    server_port = int(port)
+
+                    alive = True
+
+                    sender_thread = threading.Thread(target=send, args=(server_ip, server_port))
+                    keep_alive_thread = threading.Thread(target=keep_alive)
+
+                    sender_thread.start()
+                    keep_alive_thread.start()
+
+                    sender_thread.join()
+                    keep_alive_thread.join()
+
+                    break
+                else:
+                    raise ValueError()
+            except ValueError:
+                print("The port is invalid! Try again!")
+        except ipaddress.AddressValueError:
+            print("The address is invalid! Try again!")

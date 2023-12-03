@@ -16,7 +16,6 @@ class MessageType(Enum):
     FILE_PATH = 9
     SWITCH_NODES = 10
     ACK_AND_SWITCH = 11
-    TEST_MSG = 12
 
 
 class Message:
@@ -27,9 +26,9 @@ class Message:
         self.data = data
 
     def serialize(self):
-        crc_bytes = self.checksum.to_bytes(4, byteorder='big')  # CRC takes up 4 bytes
-        msg_type_bytes = self.msg_type.value.to_bytes(1, byteorder='big')  # msg_type takes up 1 byte
-        frag_num_bytes = self.fragment_number.to_bytes(3, byteorder='big')  # frag_num takes up 3 bytes
+        crc_bytes = self.checksum.to_bytes(4, byteorder="big")
+        msg_type_bytes = self.msg_type.value.to_bytes(1, byteorder="big")
+        frag_num_bytes = self.fragment_number.to_bytes(3, byteorder="big")
 
         # Concatenate the bytes representations
         return frag_num_bytes + msg_type_bytes + crc_bytes + self.data
@@ -44,7 +43,7 @@ class Message:
                 msg_type = mt
 
         if not msg_type:
-            raise TypeError('mom')
+            raise TypeError("The provided message type is not recognized!")
 
         checksum = int.from_bytes(data[4:8])
         msg_data = data[8:]

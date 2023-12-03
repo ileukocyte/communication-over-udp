@@ -5,19 +5,18 @@ import zlib
 
 
 class MessageType(Enum):
-    DATA = bitarray('0000')
-    ACK = bitarray('0001')
-    NACK = bitarray('0010')
-    INIT = bitarray('0011')
-    FIN = bitarray('0100')
-    KEEP_ALIVE = bitarray('0101')
-    TIMEOUT = bitarray('0110')
-    CHANGE_MAX_FRAGMENT_SIZE = bitarray('0111')
-    FRAGMENT_COUNT = bitarray('1000')
-    FILE_PATH = bitarray('1001')
-    SWITCH_NODES = bitarray('1010')
-    ACK_AND_SWITCH = bitarray('1011')
-    TEST_MSG = bitarray('1100')
+    DATA = bitarray("0000")
+    ACK = bitarray("0001")
+    NACK = bitarray("0010")
+    INIT = bitarray("0011")
+    FIN = bitarray("0100")
+    KEEP_ALIVE = bitarray("0101")
+    TIMEOUT = bitarray("0110")
+    CHANGE_MAX_FRAGMENT_SIZE = bitarray("0111")
+    FRAGMENT_COUNT = bitarray("1000")
+    FILE_PATH = bitarray("1001")
+    SWITCH_NODES = bitarray("1010")
+    ACK_AND_SWITCH = bitarray("1011")
 
 
 class Message:
@@ -54,7 +53,7 @@ class Message:
                 msg_type = mt
 
         if not msg_type:
-            raise TypeError('mom')
+            raise TypeError("The provided message type is not recognized!")
 
         checksum = int(bitarr[28:60].to01(), 2)
         msg_data = bitarr[60:].tobytes()
