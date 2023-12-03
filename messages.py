@@ -23,7 +23,7 @@ class Message:
     def __init__(self, fragment_number, msg_type, data=bytes(), checksum=None):
         self.fragment_number = fragment_number
         self.msg_type = msg_type
-        self.checksum = zlib.crc32(data) if not checksum else checksum
+        self.checksum = zlib.crc32(data) if checksum is None else checksum
         self.data = data
 
     def serialize(self):

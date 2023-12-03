@@ -1,5 +1,6 @@
 import ipaddress
 import os.path
+import random
 import socket
 import threading
 import time
@@ -123,6 +124,7 @@ def send(ip, port):
                 count_msg = Message(0, MessageType.FRAGMENT_COUNT, f"{len(fragments)}".encode())
 
                 s.sendto(count_msg.serialize(), (ip, port))
+
                 print(f"Fragment count ({len(fragments)}) sent")
 
                 while True:
@@ -148,12 +150,19 @@ def send(ip, port):
                 base = 0
                 next_sequence_number = 0
 
+                rnd_frag_num = random.randrange(0, len(fragments))
+
                 # Go-Back-N
                 while base < len(fragments):
                     while next_sequence_number < min(base + window_size, len(fragments)):
                         fragment = fragments[next_sequence_number]
 
-                        msg = Message(next_sequence_number, MessageType.DATA, fragment)
+                        msg = Message(next_sequence_number, MessageType.DATA, fragment) if not file_err_simulation_mode or next_sequence_number != rnd_frag_num else (
+                            Message(next_sequence_number, MessageType.DATA, fragment, checksum=0)
+                        )
+
+                        if next_sequence_number == rnd_frag_num:
+                            rnd_frag_num = -1
 
                         s.sendto(msg.serialize(), (ip, port))
 
