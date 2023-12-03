@@ -148,25 +148,25 @@ def send(ip, port):
 
                 window_size = 4
                 base = 0
-                next_sequence_number = 0
+                next_frag_num = 0
 
                 rnd_frag_num = random.randrange(0, len(fragments))
 
                 # Go-Back-N
                 while base < len(fragments):
-                    while next_sequence_number < min(base + window_size, len(fragments)):
-                        fragment = fragments[next_sequence_number]
+                    while next_frag_num < min(base + window_size, len(fragments)):
+                        fragment = fragments[next_frag_num]
 
-                        msg = Message(next_sequence_number, MessageType.DATA, fragment) if not file_err_simulation_mode or next_sequence_number != rnd_frag_num else (
-                            Message(next_sequence_number, MessageType.DATA, fragment, checksum=0)
+                        msg = Message(next_frag_num, MessageType.DATA, fragment) if not file_err_simulation_mode or next_frag_num != rnd_frag_num else (
+                            Message(next_frag_num, MessageType.DATA, fragment, checksum=0)
                         )
 
-                        if next_sequence_number == rnd_frag_num:
+                        if next_frag_num == rnd_frag_num:
                             rnd_frag_num = -1
 
                         s.sendto(msg.serialize(), (ip, port))
 
-                        next_sequence_number += 1
+                        next_frag_num += 1
 
                     try:
                         s.settimeout(16)
@@ -175,16 +175,16 @@ def send(ip, port):
                             ack, _ = s.recvfrom(max(1024, max_fragment_size + 8))
                             received_ack = Message.deserialize(ack)
 
-                            if received_ack.msg_type == MessageType.ACK and received_ack.fragment_number >= base:
-                                print(f"Acknowledgement received for fragment {received_ack.fragment_number}")
+                            if received_ack.msg_type == MessageType.ACK and received_ack.frag_num >= base:
+                                print(f"Acknowledgement received for fragment {received_ack.frag_num}")
 
-                                base = received_ack.fragment_number + 1
+                                base = received_ack.frag_num + 1
 
                                 break
-                            elif received_ack.msg_type == MessageType.ACK_AND_SWITCH and received_ack.fragment_number >= base:
-                                print(f"Acknowledgement received for fragment {received_ack.fragment_number}")
+                            elif received_ack.msg_type == MessageType.ACK_AND_SWITCH and received_ack.frag_num >= base:
+                                print(f"Acknowledgement received for fragment {received_ack.frag_num}")
 
-                                base = received_ack.fragment_number + 1
+                                base = received_ack.frag_num + 1
 
                                 while True:
                                     print("The server asks if you would like to switch the roles:")
@@ -210,13 +210,13 @@ def send(ip, port):
 
                                 break
                             else:
-                                next_sequence_number = received_ack.fragment_number
+                                next_frag_num = received_ack.frag_num
 
                                 print("Invalid or no acknowledgement received. Resending the window...")
 
                                 break
                     except socket.timeout:
-                        next_sequence_number = base
+                        next_frag_num = base
 
                         print("Timeout occurred while waiting for acknowledgement. Resending the window...")
         elif mode == "2":

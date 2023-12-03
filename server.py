@@ -117,18 +117,18 @@ def receive(ip, port):
         elif msg.msg_type == MessageType.DATA:
             byte_data = msg.data
 
-            if msg.checksum == zlib.crc32(byte_data) and msg.fragment_number == expected_frag_num:
-                current_data[msg.fragment_number] = byte_data
+            if msg.checksum == zlib.crc32(byte_data) and msg.frag_num == expected_frag_num:
+                current_data[msg.frag_num] = byte_data
 
-                print(f"Fragment {msg.fragment_number} received: {byte_data.decode()}")
+                print(f"Fragment {msg.frag_num} received: {byte_data.decode()}")
 
                 expected_frag_num += 1
 
                 msg_type = MessageType.ACK_AND_SWITCH if expected_frag_num == len(current_data) else MessageType.ACK
 
-                s.sendto(Message(msg.fragment_number, msg_type).serialize(), addr)
+                s.sendto(Message(msg.frag_num, msg_type).serialize(), addr)
 
-                print(f"Fragment {msg.fragment_number} acknowledged")
+                print(f"Fragment {msg.frag_num} acknowledged")
 
                 if expected_frag_num == len(current_data):
                     with open(current_name, "wb") as file:
@@ -139,7 +139,7 @@ def receive(ip, port):
 
                         expected_frag_num = 0
             else:
-                print(f"Fragment {msg.fragment_number} was not received correctly")
+                print(f"Fragment {msg.frag_num} was not received correctly")
 
                 s.sendto(Message(expected_frag_num - 1, MessageType.NACK).serialize(), addr)
 

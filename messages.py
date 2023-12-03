@@ -20,14 +20,14 @@ class MessageType(Enum):
 
 
 class Message:
-    def __init__(self, fragment_number, msg_type, data=bytes(), checksum=None):
-        self.fragment_number = fragment_number
+    def __init__(self, frag_num, msg_type, data=bytes(), checksum=None):
+        self.frag_num = frag_num
         self.msg_type = msg_type
         self.checksum = zlib.crc32(data) if checksum is None else checksum
         self.data = data
 
     def serialize(self):
-        frag_num = bin(self.fragment_number & 0xFFFFFF)[2:].zfill(24)
+        frag_num = bin(self.frag_num & 0xFFFFFF)[2:].zfill(24)
         crc = bin(self.checksum)[2:].zfill(32)
 
         arr = bitarray(frag_num)

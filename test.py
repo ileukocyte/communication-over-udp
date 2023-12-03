@@ -9,7 +9,7 @@ print(msg.checksum)
 
 test = Message.deserialize(msg.serialize())
 
-print(f'frag_number: {test.fragment_number}, msg_type: {test.msg_type}, crc: {test.checksum}, data: {test.data.decode()}')
+print(f'frag_number: {test.frag_num}, msg_type: {test.msg_type}, crc: {test.checksum}, data: {test.data.decode()}')
 
 # byte_data = msg.serialize()
 #

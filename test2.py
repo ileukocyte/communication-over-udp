@@ -19,8 +19,8 @@ class MessageType(Enum):
 
 
 class Message:
-    def __init__(self, fragment_number, msg_type, data=bytes(), checksum=None):
-        self.fragment_number = fragment_number
+    def __init__(self, frag_num, msg_type, data=bytes(), checksum=None):
+        self.frag_num = frag_num
         self.msg_type = msg_type
         self.checksum = zlib.crc32(data) if checksum is None else checksum
         self.data = data
@@ -28,7 +28,7 @@ class Message:
     def serialize(self):
         crc_bytes = self.checksum.to_bytes(4, byteorder="big")
         msg_type_bytes = self.msg_type.value.to_bytes(1, byteorder="big")
-        frag_num_bytes = self.fragment_number.to_bytes(3, byteorder="big")
+        frag_num_bytes = self.frag_num.to_bytes(3, byteorder="big")
 
         # Concatenate the bytes representations
         return frag_num_bytes + msg_type_bytes + crc_bytes + self.data
