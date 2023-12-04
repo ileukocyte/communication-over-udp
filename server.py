@@ -33,8 +33,6 @@ def receive():
     global s, current_name, current_data, max_fragment_size, client_ip, client_port, sender_mode, alive, data_transferred, file_err_simulation_mode
 
     if not sender_mode:
-        expected_frag_num = 0
-
         print(f"Server address is {server_ip}:{server_port}")
 
         while not sender_mode:
@@ -53,7 +51,6 @@ def receive():
 
                 # default
                 max_fragment_size = 64
-                expected_frag_num = 0
                 current_name = None
                 current_data = []
             elif msg.msg_type == MessageType.FIN:
@@ -132,29 +129,25 @@ def receive():
             elif msg.msg_type == MessageType.DATA:
                 byte_data = msg.data
 
-                if msg.checksum == zlib.crc32(byte_data) and msg.frag_num == expected_frag_num:
+                if msg.checksum == zlib.crc32(byte_data):
                     current_data[msg.frag_num] = byte_data
 
                     print(f"Fragment {msg.frag_num} received: {byte_data.decode()}")
 
-                    expected_frag_num += 1
-
-                    msg_type = MessageType.ACK_AND_SWITCH if expected_frag_num == len(current_data) else MessageType.ACK
+                    msg_type = MessageType.ACK_AND_SWITCH if msg.frag_num == len(current_data) - 1 else MessageType.ACK
 
                     s.sendto(Message(msg.frag_num, msg_type).serialize(), addr)
 
                     print(f"Fragment {msg.frag_num} acknowledged")
 
-                    if expected_frag_num == len(current_data):
+                    if msg.frag_num == len(current_data) - 1:
                         with open(current_name, "wb") as file:
                             file.write(b"".join(current_data))
 
                             current_name = None
                             current_data = []
-
-                            expected_frag_num = 0
                 else:
-                    print(f"Fragment {msg.frag_num} was not received correctly ({expected_frag_num} expected)")
+                    print(f"Fragment {msg.frag_num} was not received correctly")
 
                     s.sendto(Message(msg.frag_num, MessageType.NACK).serialize(), addr)
 
@@ -299,6 +292,8 @@ def receive():
                         content = file.read()
                         fragments = [content[i:i + max_fragment_size] for i in range(0, len(content), max_fragment_size)]
 
+                        rnd_frag_num = random.randrange(0, len(fragments))
+
                         count_msg = Message(0, MessageType.FRAGMENT_COUNT, f"{len(fragments)}".encode())
 
                         s.sendto(count_msg.serialize(), (server_ip, server_port))
@@ -324,47 +319,25 @@ def receive():
 
                                 s.sendto(count_msg.serialize(), (server_ip, server_port))
 
-                        window_size = 4
-                        base = 0
-                        next_frag_num = 0
+                        for i, fragment in enumerate(fragments):
+                            msg = Message(i, MessageType.DATA, fragment) if not file_err_simulation_mode or i != rnd_frag_num else (
+                                Message(i, MessageType.DATA, fragment, checksum=0)
+                            )
 
-                        rnd_frag_num = random.randrange(0, len(fragments))
-                        print(f"rnd {rnd_frag_num}")
+                            s.sendto(msg.serialize(), (server_ip, server_port))
 
-                        # Go-Back-N
-                        while base < len(fragments):
-                            while next_frag_num < min(base + window_size, len(fragments)):
-                                fragment = fragments[next_frag_num]
-
-                                msg = Message(next_frag_num, MessageType.DATA, fragment) if not file_err_simulation_mode or next_frag_num != rnd_frag_num else (
-                                    Message(next_frag_num, MessageType.DATA, fragment, checksum=0)
-                                )
-
-                                # In order so that the corrupted fragment would be sent correctly next time
-                                if next_frag_num == rnd_frag_num:
-                                    rnd_frag_num = -1
-
-                                s.sendto(msg.serialize(), (server_ip, server_port))
-
-                                next_frag_num += 1
-
-                            try:
-                                s.settimeout(16)
-
-                                while True:
+                            while True:
+                                try:
+                                    s.settimeout(100)
                                     ack, _ = s.recvfrom(max(1024, max_fragment_size + 8))
                                     received_ack = Message.deserialize(ack)
 
-                                    if received_ack.msg_type == MessageType.ACK and received_ack.frag_num >= base:
+                                    if received_ack.msg_type == MessageType.ACK:
                                         print(f"Acknowledgement received for fragment {received_ack.frag_num}")
-
-                                        base = received_ack.frag_num + 1
 
                                         break
-                                    elif received_ack.msg_type == MessageType.ACK_AND_SWITCH and received_ack.frag_num >= base:
+                                    elif received_ack.msg_type == MessageType.ACK_AND_SWITCH:
                                         print(f"Acknowledgement received for fragment {received_ack.frag_num}")
-
-                                        base = received_ack.frag_num + 1
 
                                         while True:
                                             print("The server asks if you would like to switch the roles:")
@@ -391,15 +364,17 @@ def receive():
 
                                         break
                                     else:
-                                        next_frag_num = base = received_ack.frag_num
+                                        msg = Message(i, MessageType.DATA, fragment)
 
-                                        print("Invalid or no acknowledgement received. Resending the window...")
+                                        print("The message was not received correctly. Resending...")
 
-                                        break
-                            except socket.timeout:
-                                next_frag_num = base = received_ack.frag_num
+                                        s.sendto(msg.serialize(), (server_ip, server_port))
+                                except socket.timeout:
+                                    msg = Message(i, MessageType.DATA, fragment)
 
-                                print("Timeout occurred while waiting for acknowledgement. Resending the window...")
+                                    print("Timeout occurred while waiting for message acknowledgement. Resending...")
+
+                                    s.sendto(msg.serialize(), (server_ip, server_port))
                 elif mode == "2":
                     try:
                         size = int(input("Enter your size in bytes: "))
