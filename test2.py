@@ -16,6 +16,7 @@ class MessageType(Enum):
     FILE_PATH = 9
     SWITCH_NODES = 10
     ACK_AND_SWITCH = 11
+    TEXT = 12
 
 
 class Message:

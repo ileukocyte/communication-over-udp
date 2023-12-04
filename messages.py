@@ -17,6 +17,7 @@ class MessageType(Enum):
     FILE_PATH = bitarray("1001")
     SWITCH_NODES = bitarray("1010")
     ACK_AND_SWITCH = bitarray("1011")
+    TEXT = bitarray("1100")
 
 
 class Message:
