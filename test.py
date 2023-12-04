@@ -1,15 +1,16 @@
 # from bitarray import bitarray
-from messages import MessageType, Message
+#from messages import MessageType, Message
 
-print(int(MessageType.FILE_PATH.value.to01(), 2))
 
-msg = Message(2, MessageType.FILE_PATH, b'C:/Users/alexi/Desktop/hello.txt')
-
-print(msg.checksum)
-
-test = Message.deserialize(msg.serialize())
-
-print(f'frag_number: {test.frag_num}, msg_type: {test.msg_type}, crc: {test.checksum}, data: {test.data.decode()}')
+# print(int(MessageType.FILE_PATH.value.to01(), 2))
+#
+# msg = Message(2, MessageType.FILE_PATH, b'C:/Users/alexi/Desktop/hello.txt')
+#
+# print(msg.checksum)
+#
+# test = Message.deserialize(msg.serialize())
+#
+# print(f'frag_number: {test.frag_num}, msg_type: {test.msg_type}, crc: {test.checksum}, data: {test.data.decode()}')
 
 # byte_data = msg.serialize()
 #

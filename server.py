@@ -6,8 +6,7 @@ import threading
 import time
 import zlib
 
-#from messages import Message, MessageType
-from test2 import Message, MessageType
+from messages import Message, MessageType
 
 server_ip = None
 server_port = None
@@ -25,12 +24,12 @@ sender_mode = False
 # client mode fields
 data_transferred = False
 alive = True
-file_err_simulation_mode = False
+data_err_simulation_mode = False
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 def receive():
-    global s, current_name, current_data, max_fragment_size, client_ip, client_port, sender_mode, alive, data_transferred, file_err_simulation_mode
+    global s, current_name, current_data, max_fragment_size, client_ip, client_port, sender_mode, alive, data_transferred, data_err_simulation_mode
 
     if not sender_mode:
         print(f"Server address is {server_ip}:{server_port}")
@@ -67,7 +66,7 @@ def receive():
                 print("Keep-alive message acknowledged")
             elif msg.msg_type == MessageType.FILE_PATH:
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
+                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
@@ -86,7 +85,7 @@ def receive():
                     print("Negative acknowledgement sent")
             elif msg.msg_type == MessageType.FRAGMENT_COUNT:
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
+                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
@@ -105,7 +104,7 @@ def receive():
                     print("Negative acknowledgement sent")
             elif msg.msg_type == MessageType.CHANGE_MAX_FRAGMENT_SIZE:
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
+                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
@@ -134,13 +133,13 @@ def receive():
                 break
             elif msg.msg_type == MessageType.DATA:
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
+                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
                     current_data[msg.frag_num] = byte_data
 
-                    print(f"Fragment {msg.frag_num} received: {byte_data.decode()}")
+                    print(f"Fragment {msg.frag_num} received")
 
                     msg_type = MessageType.ACK_AND_SWITCH if msg.frag_num == len(current_data) - 1 else MessageType.ACK
 
@@ -180,7 +179,7 @@ def receive():
                 print("Negative acknowledgement sent for node switch request")
             elif msg.msg_type == MessageType.TEXT:
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
+                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
@@ -243,7 +242,7 @@ def receive():
                 print("1. Transfer a file")
                 print("2. Set the maximum fragment size")
                 print("3. Switch the nodes")
-                print(f"4. Turn the file transfer error simulation mode {'on' if not file_err_simulation_mode else 'off'}")
+                print(f"4. Turn the data transfer error simulation mode {'on' if not data_err_simulation_mode else 'off'}")
                 print("5. Send a text message")
 
                 mode = input().strip().upper()
@@ -342,7 +341,7 @@ def receive():
                                 s.sendto(count_msg.serialize(), (server_ip, server_port))
 
                         for i, fragment in enumerate(fragments):
-                            msg = Message(i, MessageType.DATA, fragment) if not file_err_simulation_mode or i != rnd_frag_num else (
+                            msg = Message(i, MessageType.DATA, fragment) if not data_err_simulation_mode or i != rnd_frag_num else (
                                 Message(i, MessageType.DATA, fragment, checksum=0)
                             )
 
@@ -458,9 +457,9 @@ def receive():
 
                     break
                 elif mode == "4":
-                    file_err_simulation_mode = not file_err_simulation_mode
+                    data_err_simulation_mode = not data_err_simulation_mode
 
-                    print(f"The file transfer error simulation mode is now {'on' if file_err_simulation_mode else 'off'}!")
+                    print(f"The file transfer error simulation mode is now {'on' if data_err_simulation_mode else 'off'}!")
                 elif mode == "5":
                     data_transferred = True
 
@@ -496,7 +495,7 @@ def receive():
                             s.sendto(count_msg.serialize(), (server_ip, server_port))
 
                     for i, fragment in enumerate(fragments):
-                        msg = Message(i, MessageType.TEXT, fragment.encode()) if not file_err_simulation_mode or i != rnd_frag_num else (
+                        msg = Message(i, MessageType.TEXT, fragment.encode()) if not data_err_simulation_mode or i != rnd_frag_num else (
                             Message(i, MessageType.TEXT, fragment.encode(), checksum=0)
                         )
 
