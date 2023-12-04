@@ -29,8 +29,7 @@ class Message:
 
     def calc_checksum(self):
         frag_num_bytes = self.frag_num.to_bytes(3, byteorder="big")
-        msg_type_bytes = self.msg_type.value.to_bytes(1, byteorder="big")
-
+        msg_type_bytes = int(self.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
         return zlib.crc32(frag_num_bytes + msg_type_bytes + self.data)
 
     def serialize(self):
@@ -41,6 +40,7 @@ class Message:
 
         arr.extend(self.msg_type.value)
         arr.extend(bitarray(crc))
+        arr.extend(bitarray('0000'))  # reserved
         arr.frombytes(self.data)
 
         return arr.tobytes()
@@ -49,8 +49,6 @@ class Message:
     def deserialize(data):
         bitarr = bitarray()
         bitarr.frombytes(data)
-
-        bitarr = bitarr[:len(bitarr) - 4]
 
         frag_number = int(bitarr[:24].to01(), 2)
         msg_type = None
@@ -63,6 +61,6 @@ class Message:
             raise TypeError("The provided message type is not recognized!")
 
         checksum = int(bitarr[28:60].to01(), 2)
-        msg_data = bitarr[60:].tobytes()
+        msg_data = bitarr[64:].tobytes()
 
         return Message(frag_number, msg_type, msg_data, checksum)

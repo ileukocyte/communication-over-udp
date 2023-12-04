@@ -6,8 +6,7 @@ import threading
 import time
 import zlib
 
-#from messages import Message, MessageType
-from test2 import Message, MessageType
+from messages import Message, MessageType
 
 server_ip = None
 server_port = None
@@ -67,7 +66,7 @@ def receive():
                 print("Keep-alive message acknowledged")
             elif msg.msg_type == MessageType.FILE_PATH:
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
+                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
@@ -86,7 +85,7 @@ def receive():
                     print("Negative acknowledgement sent")
             elif msg.msg_type == MessageType.FRAGMENT_COUNT:
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
+                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
@@ -105,7 +104,7 @@ def receive():
                     print("Negative acknowledgement sent")
             elif msg.msg_type == MessageType.CHANGE_MAX_FRAGMENT_SIZE:
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
+                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
@@ -134,13 +133,13 @@ def receive():
                 break
             elif msg.msg_type == MessageType.DATA:
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
+                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
                     current_data[msg.frag_num] = byte_data
 
-                    print(f"Fragment {msg.frag_num} received: {byte_data.decode()}")
+                    print(f"Fragment {msg.frag_num} received")
 
                     msg_type = MessageType.ACK_AND_SWITCH if msg.frag_num == len(current_data) - 1 else MessageType.ACK
 
@@ -180,7 +179,7 @@ def receive():
                 print("Negative acknowledgement sent for node switch request")
             elif msg.msg_type == MessageType.TEXT:
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
+                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
