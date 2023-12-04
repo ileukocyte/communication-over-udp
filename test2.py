@@ -23,15 +23,20 @@ class Message:
     def __init__(self, frag_num, msg_type, data=bytes(), checksum=None):
         self.frag_num = frag_num
         self.msg_type = msg_type
-        self.checksum = zlib.crc32(data) if checksum is None else checksum
         self.data = data
+        self.checksum = self.calc_checksum() if checksum is None else checksum
+
+    def calc_checksum(self):
+        frag_num_bytes = self.frag_num.to_bytes(3, byteorder="big")
+        msg_type_bytes = self.msg_type.value.to_bytes(1, byteorder="big")
+
+        return zlib.crc32(frag_num_bytes + msg_type_bytes + self.data)
 
     def serialize(self):
-        crc_bytes = self.checksum.to_bytes(4, byteorder="big")
-        msg_type_bytes = self.msg_type.value.to_bytes(1, byteorder="big")
         frag_num_bytes = self.frag_num.to_bytes(3, byteorder="big")
+        msg_type_bytes = self.msg_type.value.to_bytes(1, byteorder="big")
+        crc_bytes = self.checksum.to_bytes(4, byteorder="big")
 
-        # Concatenate the bytes representations
         return frag_num_bytes + msg_type_bytes + crc_bytes + self.data
 
     @staticmethod

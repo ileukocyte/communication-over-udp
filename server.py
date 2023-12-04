@@ -66,9 +66,11 @@ def receive():
 
                 print("Keep-alive message acknowledged")
             elif msg.msg_type == MessageType.FILE_PATH:
+                frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
+                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
-                if msg.checksum == zlib.crc32(byte_data):
+                if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
                     print(f"File path received: {byte_data.decode()}")
 
                     s.sendto(Message(0, MessageType.ACK).serialize(), addr)
@@ -83,9 +85,11 @@ def receive():
 
                     print("Negative acknowledgement sent")
             elif msg.msg_type == MessageType.FRAGMENT_COUNT:
+                frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
+                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
-                if msg.checksum == zlib.crc32(byte_data):
+                if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
                     print(f"Fragment count received: {byte_data.decode()}")
 
                     s.sendto(Message(0, MessageType.ACK).serialize(), addr)
@@ -100,9 +104,11 @@ def receive():
 
                     print("Negative acknowledgement sent")
             elif msg.msg_type == MessageType.CHANGE_MAX_FRAGMENT_SIZE:
+                frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
+                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
-                if msg.checksum == zlib.crc32(byte_data):
+                if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
                     max_fragment_size = int(byte_data.decode())
 
                     print(f"Max fragment size received: {byte_data.decode()}")
@@ -127,9 +133,11 @@ def receive():
 
                 break
             elif msg.msg_type == MessageType.DATA:
+                frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
+                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
-                if msg.checksum == zlib.crc32(byte_data):
+                if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
                     current_data[msg.frag_num] = byte_data
 
                     print(f"Fragment {msg.frag_num} received: {byte_data.decode()}")
@@ -141,11 +149,23 @@ def receive():
                     print(f"Fragment {msg.frag_num} acknowledged")
 
                     if msg.frag_num == len(current_data) - 1:
-                        with open(current_name, "wb") as file:
-                            file.write(b"".join(current_data))
+                        while True:
+                            path = input("Enter the directory to save the file into: ")
+
+                            if not os.path.isdir(path):
+                                print("The path is invalid! Try again")
+
+                                continue
+
+                            with open(os.path.join(path, current_name), "wb") as file:
+                                file.write(b"".join(current_data))
+
+                                print("The file has been successfully saved!")
 
                             current_name = None
                             current_data = []
+
+                            break
                 else:
                     print(f"Fragment {msg.frag_num} was not received correctly")
 
@@ -159,9 +179,11 @@ def receive():
             elif msg.msg_type == MessageType.NACK:
                 print("Negative acknowledgement sent for node switch request")
             elif msg.msg_type == MessageType.TEXT:
+                frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
+                msg_type_bytes = msg.msg_type.value.to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
-                if msg.checksum == zlib.crc32(byte_data):
+                if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
                     current_data[msg.frag_num] = byte_data
 
                     print(f"Fragment {msg.frag_num} received: {byte_data.decode()}")
@@ -480,9 +502,11 @@ def receive():
 
                         s.sendto(msg.serialize(), (server_ip, server_port))
 
+                        print(f"Fragment {i} sent")
+
                         while True:
                             try:
-                                s.settimeout(100)
+                                s.settimeout(10)
                                 ack, _ = s.recvfrom(max(1024, max_fragment_size + 8))
                                 received_ack = Message.deserialize(ack)
 
