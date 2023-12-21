@@ -1,0 +1,314 @@
+{
+  "formatVersion": 3,
+  "id": "root",
+  "ideas": {
+    "1": {
+      "title": "The program is launched as the client",
+      "id": 1,
+      "attr": {
+        "position": [
+          -906,
+          -145,
+          1
+        ]
+      },
+      "ideas": {
+        "1": {
+          "title": "The user is asked to enter the IP address of the server",
+          "id": 4,
+          "ideas": {
+            "1": {
+              "title": "The address is valid",
+              "id": 5,
+              "attr": {
+                "position": [
+                  158.02503967285156,
+                  -95.99999237060547,
+                  4
+                ]
+              },
+              "ideas": {
+                "1": {
+                  "title": "The user is asked to enter the port of the server",
+                  "id": 8,
+                  "ideas": {
+                    "1": {
+                      "title": "The port is valid",
+                      "id": 11,
+                      "ideas": {
+                        "1": {
+                          "title": "The client sends an INIT message and tries to establish a connection",
+                          "id": 15,
+                          "ideas": {
+                            "1": {
+                              "title": "ACK is received: the connection is up",
+                              "id": 49,
+                              "ideas": {
+                                "1": {
+                                  "title": "The keep-alive thread is now active and sends KEEP_ALIVE message to the server every 10 seconds",
+                                  "id": 53,
+                                  "ideas": {
+                                    "1": {
+                                      "title": "ACK is received: send a new message and for another ACK",
+                                      "id": 54
+                                    },
+                                    "2": {
+                                      "title": "No ACK: send a TIMEOUT message to the server to let it know once it is up again",
+                                      "id": 56
+                                    }
+                                  }
+                                },
+                                "2": {
+                                  "title": "The user is given access to the client menu",
+                                  "id": 58,
+                                  "ideas": {
+                                    "1": {
+                                      "title": "1. Transfer a file",
+                                      "id": 59,
+                                      "ideas": {
+                                        "1": {
+                                          "title": "Ask for the source file path",
+                                          "id": 79,
+                                          "ideas": {
+                                            "1": {
+                                              "title": "The path is valid: send the corresponding FILE_PATH message to the server and deactivate the keep-alive thread",
+                                              "id": 80,
+                                              "ideas": {
+                                                "2": {
+                                                  "title": "ACK: read the file content and calculate the fragment count",
+                                                  "id": 86,
+                                                  "attr": {},
+                                                  "ideas": {
+                                                    "1": {
+                                                      "title": "Send a FRAGMENT_COUNT message to the client and wait for an ACK",
+                                                      "id": 89,
+                                                      "ideas": {
+                                                        "1": {
+                                                          "title": "ACK: send all the fragments as DATA messages and wait for an ACK for each one",
+                                                          "ideas": {
+                                                            "1": {
+                                                              "title": "ACK: send the next one",
+                                                              "id": 94
+                                                            },
+                                                            "2": {
+                                                              "title": "NACK or timeout: resend the fragment",
+                                                              "id": 95
+                                                            },
+                                                            "3": {
+                                                              "title": "ACK_AND_SWITCH: the file has been sent, the user can now switch to the receiver mode using the choice menu + the keep-alive thread is now active",
+                                                              "id": 96,
+                                                              "ideas": {
+                                                                "1": {
+                                                                  "title": "Switch: send an ACK to the server, switch to the receiver mode and deactivate the keep-alive thread on the current node's side",
+                                                                  "id": 97
+                                                                },
+                                                                "2": {
+                                                                  "title": "Do not switch: send a NACK to the server",
+                                                                  "id": 99
+                                                                }
+                                                              }
+                                                            }
+                                                          },
+                                                          "id": 91,
+                                                          "attr": {}
+                                                        },
+                                                        "2": {
+                                                          "title": "NACK or timeout: resend the request",
+                                                          "id": 93,
+                                                          "attr": {}
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "3": {
+                                                  "title": "NACK or timeout: resend the request",
+                                                  "id": 90,
+                                                  "attr": {}
+                                                }
+                                              }
+                                            },
+                                            "2": {
+                                              "title": "The path is invalid: return to the client menu",
+                                              "id": 81
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "2": {
+                                      "title": "2. Set the maximum fragment size",
+                                      "id": 60,
+                                      "ideas": {
+                                        "1": {
+                                          "title": "Ask for the value",
+                                          "id": 69,
+                                          "ideas": {
+                                            "1": {
+                                              "title": "The value is valid: send a CHANGE_MAX_FRAGMENT_SIZE message with the value as its data and wait for an ACK",
+                                              "id": 71,
+                                              "ideas": {
+                                                "1": {
+                                                  "title": "ACK: the value is updated",
+                                                  "id": 73
+                                                },
+                                                "2": {
+                                                  "title": "NACK or timeout: resend the request",
+                                                  "id": 74
+                                                }
+                                              }
+                                            },
+                                            "2": {
+                                              "title": "The value is invalid: return to the client menu",
+                                              "id": 72
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "3": {
+                                      "title": "3. Switch the nodes",
+                                      "id": 61,
+                                      "ideas": {
+                                        "1": {
+                                          "title": "Send a SWITCH_NODES message to the server and wait for an ACK",
+                                          "id": 75,
+                                          "ideas": {
+                                            "1": {
+                                              "title": "ACK: switch to the receiver mode and deactivate the keep-alive thread on the current node's side",
+                                              "id": 76
+                                            },
+                                            "2": {
+                                              "title": "No ACK: resend the request",
+                                              "id": 78
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "4": {
+                                      "title": "4. Turn the data transfer error simulation mode on",
+                                      "id": 62
+                                    },
+                                    "5": {
+                                      "title": "5. Send a text message",
+                                      "id": 63,
+                                      "ideas": {
+                                        "1": {
+                                          "title": "Read the message from the console and calculate the fragment count",
+                                          "ideas": {
+                                            "1": {
+                                              "title": "Send a FRAGMENT_COUNT message to the client and wait for an ACK",
+                                              "ideas": {
+                                                "1": {
+                                                  "title": "ACK: send all the fragments as TEXT messages and wait for an ACK for each one",
+                                                  "ideas": {
+                                                    "1": {
+                                                      "title": "ACK: send the next one",
+                                                      "id": 103
+                                                    },
+                                                    "2": {
+                                                      "title": "NACK or timeout: resend the fragment",
+                                                      "id": 104
+                                                    },
+                                                    "3": {
+                                                      "title": "ACK_AND_SWITCH: the message has been sent, the user can now switch to the receiver mode using the choice menu + the keep-alive thread is now active",
+                                                      "ideas": {
+                                                        "1": {
+                                                          "title": "Switch: send an ACK to the server, switch to the receiver mode and deactivate the keep-alive thread on the current node's side",
+                                                          "id": 106
+                                                        },
+                                                        "2": {
+                                                          "title": "Do not switch: send a NACK to the server",
+                                                          "id": 107
+                                                        }
+                                                      },
+                                                      "id": 105
+                                                    }
+                                                  },
+                                                  "id": 102
+                                                },
+                                                "2": {
+                                                  "title": "NACK or timeout: resend the request",
+                                                  "id": 108
+                                                }
+                                              },
+                                              "id": 101
+                                            }
+                                          },
+                                          "id": 100,
+                                          "attr": {}
+                                        }
+                                      }
+                                    },
+                                    "6": {
+                                      "title": "EXIT",
+                                      "id": 64,
+                                      "ideas": {
+                                        "1": {
+                                          "title": "Send a FIN message to the server and wait for an ACK",
+                                          "id": 65,
+                                          "ideas": {
+                                            "1": {
+                                              "title": "ACK: terminate the connection, deactivate the keep-alive thread, and return to the main menu",
+                                              "id": 67
+                                            },
+                                            "2": {
+                                              "title": "No ACK: resend the request",
+                                              "id": 68
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "2": {
+                              "title": "Timeout: resending the initialization request",
+                              "id": 50
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "2": {
+                      "title": "The port is invalid",
+                      "id": 13,
+                      "ideas": {
+                        "1": {
+                          "title": "Ask for the address and the port again",
+                          "id": 14
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "2": {
+              "title": "The address is invalid",
+              "id": 6,
+              "attr": {
+                "position": [
+                  63.00001525878906,
+                  139.0374984741211,
+                  3
+                ]
+              },
+              "ideas": {
+                "1": {
+                  "title": "Ask for the address again",
+                  "id": 7
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "title": "The program is launched as the client",
+  "links": []
+}

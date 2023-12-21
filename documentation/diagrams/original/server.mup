@@ -1,0 +1,243 @@
+{
+  "formatVersion": 3,
+  "id": "root",
+  "ideas": {
+    "1": {
+      "title": "The program is launched as the server",
+      "id": 1,
+      "attr": {
+        "position": [
+          -874,
+          -185,
+          1
+        ]
+      },
+      "ideas": {
+        "1": {
+          "title": "The user is asked to enter the IP address",
+          "id": 4,
+          "ideas": {
+            "1": {
+              "title": "The address is valid",
+              "id": 5,
+              "attr": {
+                "position": [
+                  158.02503967285156,
+                  -95.99999237060547,
+                  4
+                ]
+              },
+              "ideas": {
+                "1": {
+                  "title": "The user is asked to enter the port",
+                  "id": 8,
+                  "ideas": {
+                    "1": {
+                      "title": "The port is valid",
+                      "id": 11,
+                      "ideas": {
+                        "1": {
+                          "title": "The server is listening to incoming messages",
+                          "id": 15,
+                          "ideas": {
+                            "1": {
+                              "title": "A message is received",
+                              "id": 16,
+                              "ideas": {
+                                "1": {
+                                  "title": "INIT",
+                                  "id": 17,
+                                  "ideas": {
+                                    "1": {
+                                      "title": "Acknowledge the message and (re)establish the connection",
+                                      "id": 18
+                                    }
+                                  }
+                                },
+                                "2": {
+                                  "title": "FILE_PATH",
+                                  "id": 19,
+                                  "ideas": {
+                                    "1": {
+                                      "title": "Save the file name into a variable, send an ACK, and get ready for the upcoming file transfer",
+                                      "id": 20,
+                                      "ideas": {}
+                                    },
+                                    "2": {
+                                      "title": "The data is corrupted: send a NACK and ask for the retransmission",
+                                      "id": 21
+                                    }
+                                  }
+                                },
+                                "3": {
+                                  "title": "FRAGMENT_COUNT",
+                                  "id": 23,
+                                  "ideas": {
+                                    "1": {
+                                      "title": "Save the fragment count into a variable, send an ACK, and get ready for the upcoming file/message transfer",
+                                      "id": 24
+                                    },
+                                    "2": {
+                                      "title": "The data is corrupted: send a NACK and ask for the retransmission",
+                                      "id": 25,
+                                      "attr": {}
+                                    }
+                                  }
+                                },
+                                "4": {
+                                  "title": "DATA",
+                                  "id": 26,
+                                  "ideas": {
+                                    "1": {
+                                      "title": "Save the data fragment into a data structure",
+                                      "id": 27,
+                                      "ideas": {
+                                        "1": {
+                                          "title": "The last fragment: send an ACK_AND_SWITCH to the client and ask for the directory to save the file into on the server side",
+                                          "id": 28,
+                                          "ideas": {
+                                            "1": {
+                                              "title": "The client sends an ACK: switch to the receiver mode and activate the keep-alive thread on the current node's side",
+                                              "id": 41
+                                            }
+                                          }
+                                        },
+                                        "2": {
+                                          "title": "Other fragments: send an ACK to the client",
+                                          "id": 29
+                                        }
+                                      }
+                                    },
+                                    "2": {
+                                      "title": "The data is corrupted: send a NACK and ask for the retransmission",
+                                      "id": 30
+                                    }
+                                  }
+                                },
+                                "5": {
+                                  "title": "TEXT",
+                                  "id": 31,
+                                  "ideas": {
+                                    "1": {
+                                      "title": "Save the message fragment into a data structure",
+                                      "id": 32,
+                                      "ideas": {
+                                        "1": {
+                                          "title": "The last fragment: send an ACK_AND_SWITCH to the client and display the output on the server side",
+                                          "id": 34,
+                                          "attr": {},
+                                          "ideas": {
+                                            "1": {
+                                              "title": "The client sends an ACK: switch to the receiver mode and activate the keep-alive thread on the current node's side",
+                                              "id": 42,
+                                              "attr": {}
+                                            }
+                                          }
+                                        },
+                                        "2": {
+                                          "title": "Other fragments: send an ACK to the client",
+                                          "id": 35,
+                                          "attr": {}
+                                        }
+                                      }
+                                    },
+                                    "2": {
+                                      "title": "The data is corrupted: send a NACK and ask for the retransmission",
+                                      "id": 33,
+                                      "attr": {}
+                                    }
+                                  }
+                                },
+                                "6": {
+                                  "title": "CHANGE_MAX_FRAGMENT_SIZE",
+                                  "ideas": {
+                                    "1": {
+                                      "title": "Save the maximum fragment size into a variable and send an ACK to the client",
+                                      "id": 37
+                                    },
+                                    "2": {
+                                      "title": "The data is corrupted: send a NACK and ask for the retransmission",
+                                      "id": 38
+                                    }
+                                  },
+                                  "id": 36,
+                                  "attr": {}
+                                },
+                                "7": {
+                                  "title": "KEEP_ALIVE",
+                                  "id": 39,
+                                  "ideas": {
+                                    "1": {
+                                      "title": "Send an ACK to the client's keep-alive thread",
+                                      "id": 40,
+                                      "attr": {}
+                                    }
+                                  }
+                                },
+                                "8": {
+                                  "title": "SWITCH_NODES",
+                                  "id": 43,
+                                  "ideas": {
+                                    "1": {
+                                      "title": "Send an ACK, switch to the receiver mode, and activate the keep-alive thread on the current node's side",
+                                      "id": 44,
+                                      "attr": {}
+                                    }
+                                  }
+                                },
+                                "9": {
+                                  "title": "FIN",
+                                  "id": 47,
+                                  "ideas": {
+                                    "1": {
+                                      "title": "Send an ACK to the client to let it terminate the connection",
+                                      "id": 48,
+                                      "attr": {}
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "2": {
+                      "title": "The port is invalid",
+                      "id": 13,
+                      "ideas": {
+                        "1": {
+                          "title": "Ask for the address and the port again",
+                          "id": 14
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "2": {
+              "title": "The address is invalid",
+              "id": 6,
+              "attr": {
+                "position": [
+                  63.00001525878906,
+                  139.0374984741211,
+                  3
+                ]
+              },
+              "ideas": {
+                "1": {
+                  "title": "Ask for the address again",
+                  "id": 7
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "title": "The program is launched as the server",
+  "links": []
+}
