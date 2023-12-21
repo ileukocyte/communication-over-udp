@@ -1,23 +1,22 @@
 from enum import Enum
-from bitarray import bitarray
 
 import zlib
 
 
 class MessageType(Enum):
-    DATA = bitarray("0000")
-    ACK = bitarray("0001")
-    NACK = bitarray("0010")
-    INIT = bitarray("0011")
-    FIN = bitarray("0100")
-    KEEP_ALIVE = bitarray("0101")
-    TIMEOUT = bitarray("0110")
-    CHANGE_MAX_FRAGMENT_SIZE = bitarray("0111")
-    FRAGMENT_COUNT = bitarray("1000")
-    FILE_PATH = bitarray("1001")
-    SWITCH_NODES = bitarray("1010")
-    ACK_AND_SWITCH = bitarray("1011")
-    TEXT = bitarray("1100")
+    DATA = 0
+    ACK = 1
+    NACK = 2
+    INIT = 3
+    FIN = 4
+    KEEP_ALIVE = 5
+    TIMEOUT = 6
+    CHANGE_MAX_FRAGMENT_SIZE = 7
+    FRAGMENT_COUNT = 8
+    FILE_PATH = 9
+    SWITCH_NODES = 10
+    ACK_AND_SWITCH = 11
+    TEXT = 12
 
 
 class Message:
@@ -28,39 +27,35 @@ class Message:
         self.checksum = self.calc_checksum() if checksum is None else checksum
 
     def calc_checksum(self):
+        type_and_reserved = (self.msg_type.value & 0xF) << 4
+
         frag_num_bytes = self.frag_num.to_bytes(3, byteorder="big")
-        msg_type_bytes = int(self.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
+        msg_type_bytes = type_and_reserved.to_bytes(1, byteorder="big")
+
         return zlib.crc32(frag_num_bytes + msg_type_bytes + self.data)
 
     def serialize(self):
-        frag_num = bin(self.frag_num & 0xFFFFFF)[2:].zfill(24)
-        crc = bin(self.checksum)[2:].zfill(32)
+        type_and_reserved = (self.msg_type.value & 0xF) << 4
 
-        arr = bitarray(frag_num)
+        frag_num_bytes = self.frag_num.to_bytes(3, byteorder="big")
+        msg_type_bytes = type_and_reserved.to_bytes(1, byteorder="big")
+        crc_bytes = self.checksum.to_bytes(4, byteorder="big")
 
-        arr.extend(self.msg_type.value)
-        arr.extend(bitarray(crc))
-        arr.extend(bitarray('0000'))  # reserved
-        arr.frombytes(self.data)
-
-        return arr.tobytes()
+        return frag_num_bytes + msg_type_bytes + crc_bytes + self.data
 
     @staticmethod
     def deserialize(data):
-        bitarr = bitarray()
-        bitarr.frombytes(data)
-
-        frag_number = int(bitarr[:24].to01(), 2)
+        frag_number = int.from_bytes(data[:3])
         msg_type = None
 
         for mt in MessageType:
-            if mt.value == bitarr[24:28]:
+            if mt.value == int(data[3]) >> 4:
                 msg_type = mt
 
         if not msg_type:
             raise TypeError("The provided message type is not recognized!")
 
-        checksum = int(bitarr[28:60].to01(), 2)
-        msg_data = bitarr[64:].tobytes()
+        checksum = int.from_bytes(data[4:8])
+        msg_data = data[8:]
 
         return Message(frag_number, msg_type, msg_data, checksum)

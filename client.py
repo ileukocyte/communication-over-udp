@@ -448,8 +448,10 @@ def send():
 
                 print("Keep-alive message acknowledged")
             elif msg.msg_type == MessageType.FILE_PATH:
+                type_and_reserved = (msg.msg_type.value & 0xF) << 4
+
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
+                msg_type_bytes = type_and_reserved.to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
@@ -467,8 +469,10 @@ def send():
 
                     print("Negative acknowledgement sent")
             elif msg.msg_type == MessageType.FRAGMENT_COUNT:
+                type_and_reserved = (msg.msg_type.value & 0xF) << 4
+
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
+                msg_type_bytes = type_and_reserved.to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
@@ -486,8 +490,10 @@ def send():
 
                     print("Negative acknowledgement sent")
             elif msg.msg_type == MessageType.CHANGE_MAX_FRAGMENT_SIZE:
+                type_and_reserved = (msg.msg_type.value & 0xF) << 4
+
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
+                msg_type_bytes = type_and_reserved.to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
@@ -515,8 +521,10 @@ def send():
 
                 break
             elif msg.msg_type == MessageType.DATA:
+                type_and_reserved = (msg.msg_type.value & 0xF) << 4
+
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
+                msg_type_bytes = type_and_reserved.to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
@@ -558,8 +566,10 @@ def send():
             elif msg.msg_type == MessageType.NACK:
                 print("Negative acknowledgement sent for node switch request")
             elif msg.msg_type == MessageType.TEXT:
+                type_and_reserved = (msg.msg_type.value & 0xF) << 4
+
                 frag_num_bytes = msg.frag_num.to_bytes(3, byteorder="big")
-                msg_type_bytes = int(msg.msg_type.value.to01(), 2).to_bytes(1, byteorder="big")
+                msg_type_bytes = type_and_reserved.to_bytes(1, byteorder="big")
                 byte_data = msg.data
 
                 if msg.checksum == zlib.crc32(frag_num_bytes + msg_type_bytes + byte_data):
